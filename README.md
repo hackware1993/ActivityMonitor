@@ -1,5 +1,5 @@
 # ActivityMonitor
-用于App前后台状态变化的工具类
+用于监听App前后台状态变化的工具类
 
 # 引入
 
