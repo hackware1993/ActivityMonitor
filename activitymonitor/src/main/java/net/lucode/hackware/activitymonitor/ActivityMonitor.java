@@ -1,13 +1,10 @@
-package net.lucode.hackware.activitymonitor;
+package com.toolmatrix.feedback.utils;
 
 import android.app.Activity;
 import android.util.Log;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -20,13 +17,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ActivityMonitor {
     private static final String TAG = "ActivityMonitor";
-    private static final ActivityState[] ACTIVE_ORDER = {ActivityState.DESTROYED, ActivityState.STOPPED, ActivityState.CREATED, ActivityState.STARTED, ActivityState.PAUSED, ActivityState.RESUMED};
-    private static final ActivityState[] STRICT_ACTIVE_ORDER = {ActivityState.DESTROYED, ActivityState.STOPPED, ActivityState.PAUSED, ActivityState.CREATED, ActivityState.STARTED, ActivityState.RESUMED};
-    private static boolean sDebug = true;
+    private static final ActivityState[] ACTIVE_ORDER = {ActivityState.DESTROYED,
+            ActivityState.STOPPED, ActivityState.CREATED, ActivityState.STARTED,
+            ActivityState.PAUSED, ActivityState.RESUMED};
+    private static final ActivityState[] STRICT_ACTIVE_ORDER = {ActivityState.DESTROYED,
+            ActivityState.STOPPED, ActivityState.PAUSED, ActivityState.CREATED,
+            ActivityState.STARTED, ActivityState.RESUMED};
+    private static boolean sDebug = false;
     private static boolean sStrictForeground = true;
-    private List<ActivityEntry> mActivityEntries = new ArrayList<ActivityEntry>();
+    private final List<ActivityEntry> mActivityEntries = new ArrayList<>();
     private boolean mAppForeground;
-    private List<OnAppStateChangeListener> mOnAppStateChangeListeners = new CopyOnWriteArrayList<OnAppStateChangeListener>();
+    private final List<OnAppStateChangeListener> mOnAppStateChangeListeners
+            = new CopyOnWriteArrayList<>();
 
     private ActivityMonitor() {
     }
@@ -41,8 +43,6 @@ public class ActivityMonitor {
 
     /**
      * 开启严格的前后台判断，只要有Activity处于created或started状态，就认为App在前台
-     *
-     * @param strictForeground
      */
     public static void setStrictForeground(boolean strictForeground) {
         sStrictForeground = strictForeground;
@@ -103,9 +103,7 @@ public class ActivityMonitor {
 
     private void updateActivityState(Activity activity, ActivityState activityState) {
         ActivityEntry activityEntry = new ActivityEntry(activity, activityState);
-        if (mActivityEntries.contains(activityEntry)) {
-            mActivityEntries.remove(activityEntry);
-        }
+        mActivityEntries.remove(activityEntry);
         mActivityEntries.add(activityEntry);
 
         clearAndSort();
@@ -118,7 +116,10 @@ public class ActivityMonitor {
 
         if (sDebug) {
             Activity topActivity = getTopActivity();
-            Log.d(TAG, activity.getClass().getSimpleName() + " " + activityEntry.mState + ", top activity is " + (topActivity == null ? "null" : topActivity.getClass().getSimpleName()) + ", foreground = " + isAppForeground() + ", activities = " + mActivityEntries.size());
+            Log.d(TAG, activity.getClass().getSimpleName() + " " + activityEntry.mState
+                    + ", top activity is " + (topActivity == null ? "null"
+                    : topActivity.getClass().getSimpleName()) + ", foreground = "
+                    + isAppForeground() + ", activities = " + mActivityEntries.size());
         }
     }
 
@@ -126,20 +127,8 @@ public class ActivityMonitor {
      * 根据Activity的状态排序，并移除已销毁Activity的状态，末尾的Activity即是当前用户交互的Activity
      */
     private void clearAndSort() {
-        Iterator<ActivityEntry> activityItemIterator = mActivityEntries.iterator();
-        while (activityItemIterator.hasNext()) {
-            ActivityEntry activityEntry = activityItemIterator.next();
-            if (activityEntry.mState == ActivityState.DESTROYED) {
-                activityItemIterator.remove();
-            }
-        }
-
-        Collections.sort(mActivityEntries, new Comparator<ActivityEntry>() {
-            @Override
-            public int compare(ActivityEntry lhs, ActivityEntry rhs) {
-                return ActivityMonitor.compare(lhs.mState, rhs.mState);
-            }
-        });
+        mActivityEntries.removeIf(activityEntry -> activityEntry.mState == ActivityState.DESTROYED);
+        mActivityEntries.sort((lhs, rhs) -> compare(lhs.mState, rhs.mState));
     }
 
     public void registerAppStateChangeListener(OnAppStateChangeListener onAppStateChangeListener) {
@@ -149,9 +138,7 @@ public class ActivityMonitor {
     }
 
     public void removeAppStateChangeListener(OnAppStateChangeListener onAppStateChangeListener) {
-        if (mOnAppStateChangeListeners.contains(onAppStateChangeListener)) {
-            mOnAppStateChangeListeners.remove(onAppStateChangeListener);
-        }
+        mOnAppStateChangeListeners.remove(onAppStateChangeListener);
     }
 
     private void notifyAppStateChanged() {
@@ -171,12 +158,12 @@ public class ActivityMonitor {
         static ActivityMonitor sInstance = new ActivityMonitor();
     }
 
-    private class ActivityEntry {
+    private static class ActivityEntry {
         WeakReference<Activity> mActivityRef;
         ActivityState mState;
 
         ActivityEntry(Activity activity, ActivityState activityState) {
-            mActivityRef = new WeakReference<Activity>(activity);
+            mActivityRef = new WeakReference<>(activity);
             mState = activityState;
         }
 
@@ -187,7 +174,9 @@ public class ActivityMonitor {
             }
             if (o instanceof ActivityEntry) {
                 ActivityEntry activityEntry = (ActivityEntry) o;
-                return mActivityRef == activityEntry.mActivityRef || !(mActivityRef == null || activityEntry.mActivityRef == null) && mActivityRef.get() == activityEntry.mActivityRef.get();
+                return mActivityRef == activityEntry.mActivityRef
+                        || !(mActivityRef == null || activityEntry.mActivityRef == null)
+                        && mActivityRef.get() == activityEntry.mActivityRef.get();
             }
             return false;
         }
